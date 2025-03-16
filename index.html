@@ -22,7 +22,7 @@
         .cell { 
             width: 60px; 
             height: 60px; 
-            background-color: white; 
+            background-color: #ffffff !important; 
             border-radius: 50%; 
             margin: 5px; 
             cursor: pointer; 
@@ -34,8 +34,8 @@
             background-repeat: no-repeat; 
         }
         .cell:hover { transform: scale(1.1); }
-        .cell.dark-pink { background-color: #C71585; animation: drop 0.5s ease-out; }
-        .cell.teal { background-color: #00CED1; animation: drop 0.5s ease-out; }
+        .cell.dark-pink { background-color: #DB7093; animation: drop 0.5s ease-out; }
+        .cell.teal { background-color: #40E0D0; animation: drop 0.5s ease-out; }
         .cell.captured1 { 
             background-image: url('https://th.bing.com/th/id/OIP.u6D5Ct-LZ30rZ5uaadv4xwHaEo?w=282&h=180&c=7&r=0&o=5&pid=1.7'); 
             background-color: #ffccff; 
@@ -72,6 +72,9 @@
             text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.7); 
             z-index: 11; 
             display: none; 
+        }
+        @media (prefers-color-scheme: dark) {
+            .cell { background-color: #ffffff !important; }
         }
         @keyframes bounce { 
             0%, 20%, 50%, 80%, 100% { transform: translate(-50%, -50%) translateY(0); } 
