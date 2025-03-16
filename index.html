@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Unicorn Candy Quest</title>
+    <title>Unicorn Candy Drop</title>
     <style>
         body {
             background-image: url('https://png.pngtree.com/png-clipart/20220910/original/pngtree-cute-unicorn-cartoon-vector-with-candy-png-image_8526031.png');
@@ -15,6 +15,7 @@
             flex-direction: column;
             align-items: center;
             font-family: 'Comic Sans MS', cursive;
+            position: relative;
         }
         .board { display: flex; flex-direction: column; align-items: center; background-color: rgba(147, 112, 219, 0.7); padding: 20px; border-radius: 15px; margin: 20px auto; box-shadow: 0 0 15px rgba(0, 0, 0, 0.5); }
         .row { display: flex; justify-content: center; }
@@ -33,16 +34,16 @@
             background-repeat: no-repeat; 
         }
         .cell:hover { transform: scale(1.1); }
-        .cell.red { background-color: red; animation: drop 0.5s ease-out; }
-        .cell.yellow { background-color: yellow; animation: drop 0.5s ease-out; }
+        .cell.dark-pink { background-color: #C71585; animation: drop 0.5s ease-out; }
+        .cell.teal { background-color: #00CED1; animation: drop 0.5s ease-out; }
         .cell.captured1 { 
             background-image: url('https://th.bing.com/th/id/OIP.u6D5Ct-LZ30rZ5uaadv4xwHaEo?w=282&h=180&c=7&r=0&o=5&pid=1.7'); 
-            background-color: #ffccff; /* Light pink fallback */
+            background-color: #ffccff; 
             animation: drop 0.5s ease-out; 
         }
         .cell.captured2 { 
-            background-image: url('https://cdn.pixabay.com/photo/2012/06/27/15/02/candy-50838_1280.jpg'); 
-            background-color: #ccffcc; /* Light green fallback */
+            background-image: url('https://th.bing.com/th?id=OIP.fTJ24xcZtlrzCxdEOYSp-QAAAA&w=316&h=197&c=8&rs=1&qlt=90&o=6&pid=3.1&rm=2'); 
+            background-color: #ccffcc; 
             animation: drop 0.5s ease-out; 
         }
         @keyframes drop { 0% { transform: translateY(-1000%); } 100% { transform: translateY(0); } }
@@ -50,7 +51,40 @@
         button { padding: 10px 20px; font-size: 18px; margin: 0 10px; background-color: #ff69b4; border: none; border-radius: 5px; cursor: pointer; color: white; box-shadow: 0 0 5px rgba(0, 0, 0, 0.3); }
         button:hover { background-color: #ff1493; }
         #status { text-align: center; font-size: 24px; margin: 20px; background-color: rgba(255, 255, 255, 0.7); padding: 10px; border-radius: 10px; color: #ff00ff; }
+        #ticker { text-align: center; font-size: 18px; margin-top: 10px; background-color: rgba(147, 112, 219, 0.7); padding: 10px; border-radius: 10px; color: #ffccff; box-shadow: 0 0 5px rgba(0, 0, 0, 0.3); }
         audio { position: fixed; bottom: 10px; right: 10px; opacity: 0.8; }
+        #unicornAnimation { 
+            position: absolute; 
+            top: 70%; 
+            left: 50%; 
+            transform: translate(-50%, -50%); 
+            z-index: 10; 
+            display: none; 
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5); 
+        }
+        #resultText { 
+            position: absolute; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%, -50%); 
+            font-size: 48px; 
+            font-weight: bold; 
+            text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.7); 
+            z-index: 11; 
+            display: none; 
+        }
+        @keyframes bounce { 
+            0%, 20%, 50%, 80%, 100% { transform: translate(-50%, -50%) translateY(0); } 
+            40% { transform: translate(-50%, -50%) translateY(-30px); } 
+            60% { transform: translate(-50%, -50%) translateY(-15px); } 
+        }
+        @keyframes shake { 
+            0%, 100% { transform: translate(-50%, -50%) rotate(0deg); } 
+            25% { transform: translate(-50%, -50%) rotate(-5deg); } 
+            75% { transform: translate(-50%, -50%) rotate(5deg); } 
+        }
+        .bounce { animation: bounce 1s ease; }
+        .shake { animation: shake 1s ease infinite; }
     </style>
 </head>
 <body>
@@ -60,33 +94,45 @@
     </div>
     <div id="status">Click Start to begin!</div>
     <div class="board" id="board"></div>
+    <div id="ticker">Wins: 0 | Losses: 0</div>
     <audio id="backgroundMusic" autoplay loop>
         <source src="https://www.bensound.com/bensound-music/bensound-ukulele.mp3" type="audio/mpeg">
         Your browser does not support the audio element.
     </audio>
+    <audio id="happyJingle">
+        <source src="https://www.soundjay.com/misc/sounds/magic-chime-01.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="sadJingle">
+        <source src="https://www.myinstants.com/media/sounds/sad-trombone.mp3" type="audio/mpeg">
+        <source src="https://www.soundjay.com/buttons/sounds/beep-02.mp3" type="audio/mpeg">
+    </audio>
+    <img id="unicornAnimation" src="" alt="Unicorn" width="200">
+    <div id="resultText"></div>
 
     <script>
         const ROWS = 5;
         const COLS = 5;
         let board = Array(ROWS).fill().map(() => Array(COLS).fill(''));
-        let currentPlayer = 1; // 1 for Red (Player), 2 for Yellow (AI)
+        let currentPlayer = 1; // 1 for Dark Pink (Player), 2 for Teal (AI)
         let gameActive = false;
         let playerScore = 0;
         let aiScore = 0;
+        let wins = 0;
+        let losses = 0;
         const status = document.getElementById('status');
         const audio = document.getElementById('backgroundMusic');
+        const happyJingle = document.getElementById('happyJingle');
+        const sadJingle = document.getElementById('sadJingle');
+        const unicornAnimation = document.getElementById('unicornAnimation');
+        const resultText = document.getElementById('resultText');
+        const ticker = document.getElementById('ticker');
 
-        // Ensure audio plays on page load or first interaction
         function playAudio() {
             audio.play().catch(error => {
                 console.log("Autoplay blocked by browser. Will play on first interaction:", error);
-                document.addEventListener('click', () => {
-                    audio.play();
-                }, { once: true }); // Play on first click if autoplay fails
+                document.addEventListener('click', () => audio.play(), { once: true });
             });
         }
-
-        // Call playAudio when the page loads
         window.onload = playAudio;
 
         function createBoard() {
@@ -111,7 +157,7 @@
         function startGame() {
             resetGame();
             gameActive = true;
-            status.textContent = "Player 1's turn (Red) | Score: 0 - 0";
+            status.textContent = "Player 1's turn (Dark Pink) | Score: 0 - 0";
         }
 
         function resetGame() {
@@ -121,8 +167,13 @@
             playerScore = 0;
             aiScore = 0;
             createBoard();
-            status.textContent = "Player 1's turn (Red) | Score: 0 - 0";
-            audio.play(); // Ensure music restarts on reset
+            status.textContent = "Player 1's turn (Dark Pink) | Score: 0 - 0";
+            audio.play();
+            unicornAnimation.style.display = 'none';
+            unicornAnimation.classList.remove('bounce', 'shake');
+            resultText.style.display = 'none';
+            resultText.textContent = '';
+            ticker.textContent = `Wins: ${wins} | Losses: ${losses}`;
         }
 
         function makeMove(col) {
@@ -141,12 +192,14 @@
 
             if (board.every(row => row.every(cell => cell !== ''))) {
                 gameActive = false;
-                status.textContent = `Game Over! Final Score: ${playerScore} - ${aiScore} | ${playerScore > aiScore ? 'Player Wins!' : aiScore > playerScore ? 'AI Wins!' : 'Tie!'}`;
+                const result = playerScore > aiScore ? 'Player Wins!' : aiScore > playerScore ? 'AI Wins!' : 'Tie!';
+                status.textContent = `Game Over! Final Score: ${playerScore} - ${aiScore} | ${result}`;
+                endGame(result);
                 return;
             }
 
             currentPlayer = currentPlayer === 1 ? 2 : 1;
-            status.textContent = `Player ${currentPlayer}'s turn (${currentPlayer === 1 ? 'Red' : 'Yellow'}) | Score: ${playerScore} - ${aiScore}`;
+            status.textContent = `Player ${currentPlayer}'s turn (${currentPlayer === 1 ? 'Dark Pink' : 'Teal'}) | Score: ${playerScore} - ${aiScore}`;
 
             if (currentPlayer === 2) {
                 setTimeout(aiMove, 500);
@@ -162,9 +215,9 @@
 
         function updateCell(row, col) {
             const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-            cell.classList.remove('red', 'yellow', 'captured1', 'captured2'); // Clear all classes
-            if (board[row][col] === 1) cell.classList.add('red');
-            else if (board[row][col] === 2) cell.classList.add('yellow');
+            cell.classList.remove('teal', 'dark-pink', 'captured1', 'captured2');
+            if (board[row][col] === 1) cell.classList.add('dark-pink');
+            else if (board[row][col] === 2) cell.classList.add('teal');
             else if (board[row][col] === 'captured1') cell.classList.add('captured1');
             else if (board[row][col] === 'captured2') cell.classList.add('captured2');
         }
@@ -172,13 +225,10 @@
         function checkCaptures(row, col, player) {
             const opponent = player === 1 ? 2 : 1;
             const directions = [
-                [0, 1], [0, -1], // Horizontal
-                [1, 0], [-1, 0], // Vertical
-                [1, 1], [-1, -1], // Diagonal /
-                [1, -1], [-1, 1]  // Diagonal \
+                [0, 1], [0, -1], [1, 0], [-1, 0],
+                [1, 1], [-1, -1], [1, -1], [-1, 1]
             ];
             let captures = 0;
-
             for (let [dr, dc] of directions) {
                 const newRow = row + dr;
                 const newCol = col + dc;
@@ -186,8 +236,8 @@
                     const farRow = newRow + dr;
                     const farCol = newCol + dc;
                     if (isValid(farRow, farCol) && board[farRow][farCol] === player) {
-                        board[newRow][newCol] = player === 1 ? 'captured1' : 'captured2'; // Mark with capturer's ID
-                        updateCell(newRow, newCol); // Show appropriate candy image
+                        board[newRow][newCol] = player === 1 ? 'captured1' : 'captured2';
+                        updateCell(newRow, newCol);
                         captures++;
                         console.log(`Capture by Player ${player} at (${newRow}, ${newCol})`);
                     }
@@ -250,6 +300,40 @@
                 }
             }
             return false;
+        }
+
+        function endGame(result) {
+            if (result === 'Player Wins!') {
+                wins++;
+                happyJingle.play().catch(error => console.log("Happy jingle failed:", error));
+                unicornAnimation.src = 'https://th.bing.com/th/id/OIP.jt5W4Fy5KGeswCzceUo6LwHaMR?w=131&h=217&c=7&r=0&o=5&pid=1.7';
+                unicornAnimation.style.display = 'block';
+                unicornAnimation.classList.add('bounce');
+                resultText.textContent = 'YOU WIN!';
+                resultText.style.color = '#00ff00';
+                resultText.style.display = 'block';
+                ticker.textContent = `Wins: ${wins} | Losses: ${losses}`;
+                setTimeout(() => {
+                    unicornAnimation.style.display = 'none';
+                    unicornAnimation.classList.remove('bounce');
+                    resultText.style.display = 'none';
+                }, 2000);
+            } else if (result === 'AI Wins!') {
+                losses++;
+                sadJingle.play().catch(error => console.log("Sad jingle failed:", error));
+                unicornAnimation.src = 'https://th.bing.com/th/id/OIP.xAFosg3dK9OaU8ruRVtiOgHaEJ?w=284&h=180&c=7&r=0&o=5&pid=1.7';
+                unicornAnimation.style.display = 'block';
+                unicornAnimation.classList.add('shake');
+                resultText.textContent = 'YOU LOSE!';
+                resultText.style.color = '#ff0000';
+                resultText.style.display = 'block';
+                ticker.textContent = `Wins: ${wins} | Losses: ${losses}`;
+                setTimeout(() => {
+                    unicornAnimation.style.display = 'none';
+                    unicornAnimation.classList.remove('shake');
+                    resultText.style.display = 'none';
+                }, 2000);
+            }
         }
 
         // Initialize board
